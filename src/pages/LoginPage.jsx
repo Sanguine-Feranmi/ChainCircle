@@ -13,8 +13,10 @@ export default function LoginPage() {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.email || !form.password) { setError("Please fill in all fields."); return; }
-    // Simulate auth — accept any credentials
-    login({ name: "Alex Morgan", email: form.email, avatar: "AM" });
+    // Simulate auth — derive name from email local part
+    const namePart = form.email.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    const initials = namePart.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+    login({ name: namePart, email: form.email, avatar: initials });
     navigate("/dashboard");
   };
 

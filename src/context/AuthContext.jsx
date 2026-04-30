@@ -15,9 +15,16 @@ export function AuthProvider({ children }) {
 
   const login = (userData) => {
     const token = "mock_token_" + Date.now();
+    // Preserve joinDate if user already exists in storage
+    const existing = localStorage.getItem("cc_user");
+    const existingUser = existing ? JSON.parse(existing) : null;
+    const merged = {
+      ...userData,
+      joinDate: existingUser?.joinDate ?? new Date().toISOString(),
+    };
     localStorage.setItem("cc_token", token);
-    localStorage.setItem("cc_user", JSON.stringify(userData));
-    setUser(userData);
+    localStorage.setItem("cc_user", JSON.stringify(merged));
+    setUser(merged);
   };
 
   const logout = () => {

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { mockTransactions } from "../data/mockData";
-import { Search, Filter, ArrowUpRight, ArrowDownLeft, RefreshCw, CreditCard } from "lucide-react";
+import { useWallet } from "../context/WalletContext";
+import { Search, Filter, ArrowUpRight, ArrowDownLeft, RefreshCw, CreditCard, Download } from "lucide-react";
 
 const statusColors = {
   Confirmed: "bg-green-500/10 text-green-400 border-green-500/20",
@@ -8,20 +8,28 @@ const statusColors = {
   Failed:    "bg-red-500/10 text-red-400 border-red-500/20",
 };
 
-const typeIcon = { Send: ArrowUpRight, Receive: ArrowDownLeft, Swap: RefreshCw, Buy: CreditCard };
-const typeColor = { Send: "text-red-400", Receive: "text-green-400", Swap: "text-blue-400", Buy: "text-violet-400" };
+const typeIcon  = { Send: ArrowUpRight, Receive: ArrowDownLeft, Swap: RefreshCw, Buy: CreditCard, "Manual Top-Up": Download };
+const typeColor = { Send: "text-red-400", Receive: "text-green-400", Swap: "text-blue-400", Buy: "text-violet-400", "Manual Top-Up": "text-green-400" };
 
-const filters = ["All", "Send", "Receive", "Swap", "Buy"];
+const filters = ["All", "Send", "Receive", "Swap", "Buy", "Manual Top-Up"];
 
 export default function TransactionPage() {
+  const { transactions } = useWallet();
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
 
-  const filtered = mockTransactions.filter((tx) => {
+  const filtered = transactions.filter((tx) => {
     const matchType   = activeFilter === "All" || tx.type === activeFilter;
     const matchSearch = tx.hash.includes(search) || tx.chain.toLowerCase().includes(search.toLowerCase());
     return matchType && matchSearch;
   });
+
+  const counts = {
+    total:     transactions.length,
+    confirmed: transactions.filter((t) => t.status === "Confirmed").length,
+    pending:   transactions.filter((t) => t.status === "Pending").length,
+    failed:    transactions.filter((t) => t.status === "Failed").length,
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -33,10 +41,10 @@ export default function TransactionPage() {
       {/* Summary chips */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Total",     value: mockTransactions.length,                                    color: "violet" },
-          { label: "Confirmed", value: mockTransactions.filter((t) => t.status === "Confirmed").length, color: "green"  },
-          { label: "Pending",   value: mockTransactions.filter((t) => t.status === "Pending").length,   color: "yellow" },
-          { label: "Failed",    value: mockTransactions.filter((t) => t.status === "Failed").length,    color: "red"    },
+          { label: "Total",     value: counts.total,     color: "violet" },
+          { label: "Confirmed", value: counts.confirmed, color: "green"  },
+          { label: "Pending",   value: counts.pending,   color: "yellow" },
+          { label: "Failed",    value: counts.failed,    color: "red"    },
         ].map(({ label, value, color }) => (
           <div key={label} className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
             <div className={`text-2xl font-bold mb-1 ${
@@ -50,14 +58,12 @@ export default function TransactionPage() {
       </div>
 
       {/* Filters + search */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex gap-1 bg-white/5 border border-white/10 rounded-xl p-1">
+      <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+        <div className="flex gap-1 bg-white/5 border border-white/10 rounded-xl p-1 flex-wrap">
           {filters.map((f) => (
             <button key={f} onClick={() => setActiveFilter(f)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                activeFilter === f
-                  ? "bg-violet-600 text-white"
-                  : "text-white/50 hover:text-white"
+                activeFilter === f ? "bg-violet-600 text-white" : "text-white/50 hover:text-white"
               }`}>
               {f}
             </button>
@@ -96,14 +102,14 @@ export default function TransactionPage() {
                   <tr key={tx.hash} className="hover:bg-white/[0.03] transition-colors">
                     <td className="px-6 py-4 text-white/50 text-sm font-mono">{tx.hash.slice(0, 12)}…</td>
                     <td className="px-6 py-4">
-                      <span className={`flex items-center gap-1.5 text-sm font-medium ${typeColor[tx.type]}`}>
+                      <span className={`flex items-center gap-1.5 text-sm font-medium ${typeColor[tx.type] ?? "text-white/60"}`}>
                         <Icon size={13} /> {tx.type}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-white text-sm">{tx.amount}</td>
                     <td className="px-6 py-4 text-white/60 text-sm">{tx.chain}</td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusColors[tx.status]}`}>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusColors[tx.status] ?? ""}`}>
                         {tx.status}
                       </span>
                     </td>

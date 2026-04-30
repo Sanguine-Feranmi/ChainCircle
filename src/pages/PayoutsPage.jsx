@@ -1,27 +1,30 @@
 import { Banknote, Clock, CheckCircle, XCircle, ArrowDownToLine } from "lucide-react";
+import { useWallet } from "../context/WalletContext";
 
-const payouts = [
-  { id: "PAY-001", recipient: "Jordan Lee",   amount: "$1,200", method: "ETH",     status: "Completed", date: "2025-07-10" },
-  { id: "PAY-002", recipient: "Sam Rivera",   amount: "$850",   method: "MATIC",   status: "Pending",   date: "2025-07-09" },
-  { id: "PAY-003", recipient: "Taylor Kim",   amount: "$2,000", method: "BTC",     status: "Completed", date: "2025-07-08" },
-  { id: "PAY-004", recipient: "Morgan Blake", amount: "$430",   method: "ETH",     status: "Failed",    date: "2025-07-07" },
-  { id: "PAY-005", recipient: "Jordan Lee",   amount: "$670",   method: "USDC",    status: "Completed", date: "2025-07-05" },
-];
-
-const statusIcon = { Completed: CheckCircle, Pending: Clock, Failed: XCircle };
+const statusIcon  = { Completed: CheckCircle, Pending: Clock, Failed: XCircle, Confirmed: CheckCircle };
 const statusColor = {
   Completed: "text-green-400 bg-green-500/10 border-green-500/20",
+  Confirmed: "text-green-400 bg-green-500/10 border-green-500/20",
   Pending:   "text-yellow-400 bg-yellow-500/10 border-yellow-500/20",
   Failed:    "text-red-400 bg-red-500/10 border-red-500/20",
 };
 
-const summaryCards = [
-  { label: "Total Paid Out",  value: "$18,340", icon: Banknote,        color: "violet" },
-  { label: "Pending",         value: "$850",    icon: Clock,           color: "orange" },
-  { label: "This Month",      value: "$5,150",  icon: ArrowDownToLine, color: "green"  },
-];
+function fmt(n) {
+  return "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
 export default function PayoutsPage() {
+  const { transactions, totalPaidOut, totalPending, thisMonthTotal } = useWallet();
+
+  // Show Send + Manual Top-Up transactions as payout history
+  const payouts = transactions.filter((t) => t.type === "Send" || t.type === "Manual Top-Up");
+
+  const summaryCards = [
+    { label: "Total Paid Out", value: fmt(totalPaidOut),   icon: Banknote,        color: "violet" },
+    { label: "Pending",        value: fmt(totalPending),   icon: Clock,           color: "orange" },
+    { label: "This Month",     value: fmt(thisMonthTotal), icon: ArrowDownToLine, color: "green"  },
+  ];
+
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -58,22 +61,26 @@ export default function PayoutsPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-white/5">
-                {["ID", "Recipient", "Amount", "Method", "Status", "Date"].map((h) => (
+                {["Hash", "Type", "Amount", "Chain", "Status", "Date"].map((h) => (
                   <th key={h} className="px-6 py-3 text-left text-white/40 text-xs font-medium uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {payouts.map((p) => {
-                const Icon = statusIcon[p.status];
+              {payouts.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-white/30 text-sm">No payouts yet.</td>
+                </tr>
+              ) : payouts.map((p) => {
+                const Icon = statusIcon[p.status] ?? CheckCircle;
                 return (
-                  <tr key={p.id} className="hover:bg-white/[0.03] transition-colors">
-                    <td className="px-6 py-4 text-white/50 text-sm font-mono">{p.id}</td>
-                    <td className="px-6 py-4 text-white text-sm">{p.recipient}</td>
+                  <tr key={p.hash} className="hover:bg-white/[0.03] transition-colors">
+                    <td className="px-6 py-4 text-white/50 text-sm font-mono">{p.hash.slice(0, 12)}…</td>
+                    <td className="px-6 py-4 text-white text-sm">{p.type}</td>
                     <td className="px-6 py-4 text-white font-semibold text-sm">{p.amount}</td>
-                    <td className="px-6 py-4 text-white/60 text-sm">{p.method}</td>
+                    <td className="px-6 py-4 text-white/60 text-sm">{p.chain}</td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${statusColor[p.status]}`}>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${statusColor[p.status] ?? ""}`}>
                         <Icon size={11} /> {p.status}
                       </span>
                     </td>

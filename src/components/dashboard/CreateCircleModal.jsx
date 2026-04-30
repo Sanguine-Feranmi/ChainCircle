@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { X, ChevronRight, ChevronLeft, MoreHorizontal, Users } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
 const GOAL_TYPES = ["Emergency Fund", "Vacation", "Investment", "Education", "Home Purchase", "Other"];
 
@@ -179,7 +180,7 @@ function CirclePreviewCard({ name, color, maxMembers }) {
 }
 
 // ── Step 3 ──────────────────────────────────────────────────────────────────
-function Step3({ step1, step2, data, onChange, errors }) {
+function Step3({ step1, step2, data, onChange, errors, userInitials }) {
   const fee = step2.amount ? (parseFloat(step2.amount) * 0.01).toFixed(2) : "0.00";
 
   return (
@@ -222,7 +223,7 @@ function Step3({ step1, step2, data, onChange, errors }) {
         <span className="text-white/60 text-sm">Who pays first</span>
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 bg-gradient-to-br from-fuchsia-600 to-violet-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-            AM
+            {userInitials}
           </div>
           <span className="text-xs bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30 px-2 py-0.5 rounded-full">You</span>
         </div>
@@ -311,6 +312,11 @@ function validateStep3(d) {
 
 // ── Main modal ──────────────────────────────────────────────────────────────
 export default function CreateCircleModal({ onClose, onCreated }) {
+  const { user } = useAuth();
+  const userInitials = user?.name
+    ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    : "?";
+
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState({});
 
@@ -374,7 +380,7 @@ export default function CreateCircleModal({ onClose, onCreated }) {
         <div className="px-6 pb-2 overflow-y-auto flex-1">
           {step === 0 && <Step1 data={step1} onChange={updateStep1} errors={errors} />}
           {step === 1 && <Step2 data={step2} onChange={updateStep2} errors={errors} />}
-          {step === 2 && <Step3 step1={step1} step2={step2} data={step3} onChange={updateStep3} errors={errors} />}
+          {step === 2 && <Step3 step1={step1} step2={step2} data={step3} onChange={updateStep3} errors={errors} userInitials={userInitials} />}
         </div>
 
         {/* Footer buttons */}

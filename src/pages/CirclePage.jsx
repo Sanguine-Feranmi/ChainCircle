@@ -1,12 +1,13 @@
 import { useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Users, BarChart2, Wallet, TrendingUp, ArrowUpRight, ArrowDownRight,
-  Search, Pin, MoreHorizontal, Plus, X, Loader2, Copy, ExternalLink, Trash2,
-  Shield, Zap, Globe, Smartphone,
+  Search, Pin, MoreHorizontal, Plus, Clock,
 } from "lucide-react";
 import PortfolioChart from "../components/dashboard/PortfolioChart";
-import { useWallet } from "../context/WalletContext";
 import CreateCircleModal from "../components/dashboard/CreateCircleModal";
+import SharedWalletComponent from "../components/dashboard/SharedWalletComponent";
+import { useUser } from "../context/UserContext";
 
 // ─────────────────────────────────────────────
 // Mock data
@@ -23,15 +24,6 @@ const analyticsStats = [
   { label: "Avg. Transaction",    value: "$340",      change: "+5.2%",  up: true },
   { label: "Failed Txns",         value: "3",         change: "-40%",   up: true },
   { label: "Gas Saved",           value: "$214",      change: "+22%",   up: true },
-];
-
-
-
-const walletProviders = [
-  { id: "metamask",   name: "MetaMask",        icon: Shield,      desc: "Browser extension wallet" },
-  { id: "walletconnect", name: "WalletConnect", icon: Globe,       desc: "Connect via QR code" },
-  { id: "coinbase",   name: "Coinbase Wallet",  icon: Zap,         desc: "Coinbase's self-custody wallet" },
-  { id: "trust",      name: "Trust Wallet",     icon: Smartphone,  desc: "Mobile-first wallet" },
 ];
 
 // ─────────────────────────────────────────────
@@ -100,6 +92,8 @@ export function CircleCard({ circle, menuOpen, onMenuToggle }) {
 // My Circles tab
 // ─────────────────────────────────────────────
 function MyCirclesTab({ circles, onAddCircle }) {
+  const navigate = useNavigate();
+  const { circleHistory } = useUser();
   const [search, setSearch] = useState("");
   const [menuOpen, setMenuOpen] = useState(null);
 
@@ -153,6 +147,44 @@ function MyCirclesTab({ circles, onAddCircle }) {
           )}
         </div>
       )}
+
+      {/* Circle History */}
+      <div className="mt-8">
+        <h3 className="text-white font-semibold text-lg mb-4">Circle History</h3>
+        {circleHistory.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-3 bg-white/[0.02] border border-white/5 rounded-2xl">
+            <Clock size={24} className="text-white/20" />
+            <p className="text-white/30 text-sm">No circle history yet.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {circleHistory.map(c => (
+              <button
+                key={c.id}
+                onClick={() => navigate(`/circle?id=${c.id}`)}
+                className="w-full flex items-center gap-4 bg-white/5 border border-white/10 rounded-2xl px-5 py-4
+                           hover:border-violet-500/20 hover:bg-white/[0.07] transition-all text-left"
+              >
+                <div className={`w-10 h-10 bg-gradient-to-br ${c.color ?? "from-violet-600 to-fuchsia-600"} rounded-full flex items-center justify-center text-base flex-shrink-0`}>
+                  {c.icon ?? "⭕"}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white font-semibold text-sm">{c.name}</p>
+                  {c.completedDate && (
+                    <p className="text-white/40 text-xs mt-0.5">Completed {c.completedDate}</p>
+                  )}
+                </div>
+                {c.status && (
+                  <span className="text-xs px-3 py-1 rounded-full border font-medium flex-shrink-0
+                                   text-green-400 border-green-500/30 bg-green-500/5">
+                    {c.status}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* FAB */}
       <button
@@ -250,164 +282,15 @@ function AnalyticsTab() {
 }
 
 // ─────────────────────────────────────────────
-// Wallet connect modal
-// ─────────────────────────────────────────────
-function WalletModal({ onClose }) {
-  const { connecting, error, setError, connectMetaMask, connectMock } = useWallet();
-
-  const handleConnect = async (providerId) => {
-    if (providerId === "metamask") {
-      await connectMetaMask();
-    } else {
-      const names = { walletconnect: "WalletConnect", coinbase: "Coinbase Wallet", trust: "Trust Wallet" };
-      connectMock(names[providerId]);
-    }
-    // Close on success (error stays open so user can see it)
-    if (!error) onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-
-      <div className="relative w-full max-w-sm bg-[#13131a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-          <h3 className="text-white font-semibold">Connect Wallet</h3>
-          <button onClick={onClose} className="text-white/40 hover:text-white transition-colors">
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* Error */}
-        {error && (
-          <div className="mx-4 mt-4 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl px-4 py-3">
-            {error}
-          </div>
-        )}
-
-        {/* Provider list */}
-        <div className="p-4 space-y-2">
-          {walletProviders.map(({ id, name, icon: Icon, desc }) => (
-            <button
-              key={id}
-              onClick={() => { setError(null); handleConnect(id); }}
-              disabled={connecting}
-              className="w-full flex items-center gap-4 px-4 py-3.5 bg-white/5 border border-white/10
-                         rounded-xl hover:border-violet-500/40 hover:bg-white/[0.08] transition-all
-                         disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <div className="w-9 h-9 bg-violet-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                {connecting ? <Loader2 size={18} className="text-violet-400 animate-spin" /> : <Icon size={18} className="text-violet-400" />}
-              </div>
-              <div className="text-left">
-                <p className="text-white text-sm font-medium">{name}</p>
-                <p className="text-white/40 text-xs">{desc}</p>
-              </div>
-            </button>
-          ))}
-        </div>
-
-        <p className="text-white/20 text-xs text-center pb-4">
-          By connecting, you agree to our Terms of Service
-        </p>
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────
-// Wallet tab — connect flow
+// Wallet tab — using shared component
 // ─────────────────────────────────────────────
 function WalletTab() {
-  const { wallets, removeWallet } = useWallet();
-  const [showModal, setShowModal] = useState(false);
-  const [copied, setCopied]       = useState(null);
-
-  const copy = (addr, id) => {
-    navigator.clipboard.writeText(addr);
-    setCopied(id);
-    setTimeout(() => setCopied(null), 1500);
-  };
-
-  const truncAddr = (addr) => `${addr.slice(0, 8)}…${addr.slice(-6)}`;
-
   return (
-    <div className="space-y-5">
-      {/* Add wallet button */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-white font-semibold">Connected Wallets</h3>
-          <p className="text-white/40 text-xs mt-0.5">{wallets.length} wallet{wallets.length !== 1 ? "s" : ""} connected</p>
-        </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white text-sm
-                     px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-violet-500/20"
-        >
-          <Plus size={15} /> Add Wallet
-        </button>
-      </div>
-
-      {/* Empty state */}
-      {wallets.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 gap-4 bg-white/[0.02] border border-white/5 rounded-2xl">
-          <div className="w-16 h-16 bg-violet-500/10 rounded-2xl flex items-center justify-center">
-            <Wallet size={28} className="text-violet-400/50" />
-          </div>
-          <div className="text-center">
-            <p className="text-white/50 text-sm font-medium">No wallets connected</p>
-            <p className="text-white/25 text-xs mt-1">Click "Add Wallet" to connect your first wallet</p>
-          </div>
-          <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white text-sm px-5 py-2.5 rounded-xl transition-all"
-          >
-            <Plus size={15} /> Connect Wallet
-          </button>
-        </div>
-      )}
-
-      {/* Wallet cards */}
-      {wallets.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {wallets.map((w) => (
-            <div key={w.id} className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:border-violet-500/30 transition-all">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-violet-500/10 rounded-lg flex items-center justify-center">
-                    <Wallet size={15} className="text-violet-400" />
-                  </div>
-                  <div>
-                    <p className="text-white text-sm font-semibold">{w.provider}</p>
-                    <p className="text-white/40 text-xs">{w.chain}</p>
-                  </div>
-                </div>
-                <button onClick={() => removeWallet(w.id)} className="text-white/20 hover:text-red-400 transition-colors">
-                  <Trash2 size={14} />
-                </button>
-              </div>
-              <div className="flex items-center gap-1.5 mb-3">
-                <span className="text-white/50 text-xs font-mono">{truncAddr(w.address)}</span>
-                <button onClick={() => copy(w.address, w.id)} className="text-white/30 hover:text-violet-400 transition-colors">
-                  <Copy size={11} />
-                </button>
-                {copied === w.id && <span className="text-green-400 text-xs">Copied!</span>}
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="text-white font-bold text-sm">{w.balance}</div>
-                <button className="text-white/30 hover:text-violet-400 transition-colors">
-                  <ExternalLink size={13} />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {showModal && <WalletModal onClose={() => setShowModal(false)} />}
-    </div>
+    <SharedWalletComponent 
+      mode="condensed" 
+      showCreateButton={true}
+      className=""
+    />
   );
 }
 
@@ -422,7 +305,9 @@ const tabs = [
 ];
 
 export default function CirclePage() {
-  const [activeTab, setActiveTab] = useState("mycircles");
+  const [searchParams] = useSearchParams();
+  const historyId = searchParams.get("id");
+  const [activeTab, setActiveTab] = useState(historyId ? "mycircles" : "mycircles");
   const [circles, setCircles] = useState([]);
   const [showModal, setShowModal] = useState(false);
 

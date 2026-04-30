@@ -1,5 +1,6 @@
+import { useMemo } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { chartData } from "../../data/mockData";
+import { useWallet } from "../../context/WalletContext";
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload?.length) {
@@ -13,7 +14,53 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
+function fmt(n) {
+  return "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 export default function PortfolioChart() {
+  const { transactions, totalBalance } = useWallet();
+
+  // Build a rolling monthly balance from confirmed transactions
+  const chartData = useMemo(() => {
+    const now = new Date();
+    // Last 7 months
+    const months = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (6 - i), 1);
+      return {
+        date: d.toLocaleString("default", { month: "short" }),
+        month: d.getMonth(),
+        year: d.getFullYear(),
+      };
+    });
+
+    // Cumulative balance up to end of each month
+    let running = 0;
+    return months.map(({ date, month, year }) => {
+      const monthTxs = transactions.filter((t) => {
+        const d = new Date(t.date);
+        return (
+          d.getFullYear() < year ||
+          (d.getFullYear() === year && d.getMonth() <= month)
+        );
+      });
+      const received = monthTxs
+        .filter((t) => t.type === "Receive" || t.type === "Manual Top-Up" || t.type === "Buy")
+        .reduce((s, t) => s + (t.amountUsd ?? 0), 0);
+      const sent = monthTxs
+        .filter((t) => t.type === "Send")
+        .reduce((s, t) => s + (t.amountUsd ?? 0), 0);
+      running = received - sent;
+      return { date, balance: Math.max(0, running) };
+    });
+  }, [transactions]);
+
+  // Month-over-month change
+  const lastTwo = chartData.slice(-2);
+  const monthChange = lastTwo.length === 2 && lastTwo[0].balance > 0
+    ? (((lastTwo[1].balance - lastTwo[0].balance) / lastTwo[0].balance) * 100).toFixed(1)
+    : null;
+
   return (
     <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
       <div className="flex items-center justify-between mb-6">
@@ -22,8 +69,14 @@ export default function PortfolioChart() {
           <p className="text-white/40 text-sm">Balance over time</p>
         </div>
         <div className="text-right">
-          <div className="text-white font-bold text-xl">$41,652</div>
-          <div className="text-green-400 text-sm">+16.3% this month</div>
+          <div className="text-white font-bold text-xl">{fmt(totalBalance)}</div>
+          {monthChange !== null ? (
+            <div className={`text-sm ${parseFloat(monthChange) >= 0 ? "text-green-400" : "text-red-400"}`}>
+              {parseFloat(monthChange) >= 0 ? "+" : ""}{monthChange}% this month
+            </div>
+          ) : (
+            <div className="text-white/30 text-sm">No activity yet</div>
+          )}
         </div>
       </div>
       <ResponsiveContainer width="100%" height={220}>
