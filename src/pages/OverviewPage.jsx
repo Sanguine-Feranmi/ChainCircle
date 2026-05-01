@@ -153,14 +153,16 @@ export default function OverviewPage() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Stat cards + Add Balance button */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 flex-1">
-          {overviewStats.map((s) => <StatCard key={s.label} {...s} />)}
-        </div>
+      {/* Stat cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {overviewStats.map((s) => <StatCard key={s.label} {...s} />)}
+      </div>
+
+      {/* Add Balance button — below the cards */}
+      <div>
         <button
           onClick={() => setShowAddBalance(true)}
-          className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white text-sm px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-violet-500/20 flex-shrink-0"
+          className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white text-sm px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-violet-500/20"
         >
           <Plus size={15} /> Add Balance
         </button>

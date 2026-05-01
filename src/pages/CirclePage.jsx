@@ -321,17 +321,17 @@ export default function CirclePage() {
         <p className="text-white/40 text-sm mt-1">Manage your trusted group, view analytics and connected wallets.</p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-white/5 border border-white/10 rounded-xl p-1 w-fit overflow-x-auto">
+      {/* Tabs — full width, equal columns, no overflow */}
+      <div className="grid grid-cols-4 gap-1 bg-white/5 border border-white/10 rounded-xl p-1 w-full">
         {tabs.map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setActiveTab(id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+            className={`flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all min-w-0 ${
               activeTab === id
                 ? "bg-violet-600 text-white shadow-lg shadow-violet-500/20"
                 : "text-white/50 hover:text-white"
             }`}>
-            <Icon size={14} />
-            {label}
+            <Icon size={13} className="flex-shrink-0" />
+            <span className="truncate">{label}</span>
           </button>
         ))}
       </div>
